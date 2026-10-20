@@ -1,0 +1,42 @@
+{
+    "name": "zalliant/ethernize-core",
+    "description": "Núcleo do Zalliant Ethernize: container, HTTP, middleware e roteamento.",
+    "type": "library",
+    "keywords": [
+        "ethernize",
+        "php",
+        "framework"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "ext-filter": "*",
+        "ext-hash": "*",
+        "ext-json": "*",
+        "nyholm/psr7": "^1.8",
+        "nyholm/psr7-server": "^1.1",
+        "psr/container": "^2.0",
+        "psr/event-dispatcher": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0",
+        "psr/log": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ethernize\\Core\\": "src/"
+        }
+    },
+    "archive": {
+        "exclude": [
+            "/tests",
+            "/.gitattributes"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}
