@@ -7,8 +7,8 @@ namespace Ethernize\Core\Cli;
 /**
  * `php ethernize run [application] [--port=N]`: starts the development server of one application of
  * the project, the way bin/serve-local.ps1 does for development: PHP's built-in server on 127.0.0.1,
- * the application's own public folder as the document root and its public/index.php as the front
- * controller, APP_ENV=local, APP_DEBUG=true and no Manifest.
+ * the application's own public folder as the document root and resources/dev-router.php as the router
+ * (real files of the public folder are served as they are; everything else reaches public/index.php), APP_ENV=local, APP_DEBUG=true and no Manifest.
  *
  * Each application gets only its own folder and its own APP_URL: running two at once (on different
  * ports) shares nothing.
@@ -18,9 +18,9 @@ final class RunCommand implements Command
     private const HOST = '127.0.0.1';
 
     /** Ports used when --port is not given. Other applications start at 8000. */
-    private const DEFAULT_PORTS = ['aether' => 8080, 'website' => 8081];
+    private const DEFAULT_PORTS = ['app' => 8080, 'website' => 8081];
     private const FALLBACK_PORT = 8000;
-    private const DEFAULT_APPLICATION = 'aether';
+    private const DEFAULT_APPLICATION = 'app';
 
     public function __construct(
         private readonly string $root,
@@ -49,8 +49,8 @@ final class RunCommand implements Command
             'Starts the development server of an application on http://127.0.0.1:PORT and keeps',
             'running until you press Ctrl+C.',
             '',
-            '  application   a folder inside apps/ with a public/index.php (default: the only one, or aether)',
-            '  --port=PORT   the port to listen on (default: 8080 for aether, 8081 for website, 8000 for any other)',
+            '  application   a folder inside apps/ with a public/index.php (default: the only one, or app)',
+            '  --port=PORT   the port to listen on (default: 8080 for app, 8081 for website, 8000 for any other)',
             '',
             'Applications found in this project: ' . ($applications === [] ? 'none' : implode(', ', $applications)),
             '',
@@ -103,7 +103,7 @@ final class RunCommand implements Command
         $output->line();
 
         $public = $path . DIRECTORY_SEPARATOR . 'public';
-        $command = [PHP_BINARY, '-S', self::HOST . ':' . $port, '-t', $public, $public . DIRECTORY_SEPARATOR . 'index.php'];
+        $command = [PHP_BINARY, '-S', self::HOST . ':' . $port, '-t', $public, dirname(__DIR__, 2) . '/resources/dev-router.php'];
 
         return ($this->launcher ?? new ProcessLauncher())->launch($command, $this->root, $this->environment($url), $port, $output);
     }

@@ -11,6 +11,7 @@ use Ethernize\Core\Container\Container;
 use Ethernize\Core\Events\Dispatcher as Events;
 use Ethernize\Core\Events\RequestReceived;
 use Ethernize\Core\Events\Terminated;
+use Ethernize\Core\Http\CurrentRequest;
 use Ethernize\Core\Http\Emitter;
 use Ethernize\Core\Http\ExceptionHandler;
 use Ethernize\Core\Http\Response;
@@ -27,6 +28,7 @@ use Ethernize\Core\Middleware\SecurityHeaders;
 use Ethernize\Core\Middleware\StartSession;
 use Ethernize\Core\Middleware\TrustedProxies;
 use Ethernize\Core\Routing\Dispatcher;
+use Ethernize\Core\Routing\InvalidRouteException;
 use Ethernize\Core\Routing\RouteResolver;
 use Ethernize\Core\Routing\Router;
 use Ethernize\Core\Routing\TrailingSlash;
@@ -427,6 +429,7 @@ final class Application implements RequestHandlerInterface
         $this->container->instance(Config::class, $this->config);
         $this->container->instance(Router::class, $this->router);
         $this->container->instance(UrlGenerator::class, new UrlGenerator($this->routes, is_string($url) ? $url : null));
+        $this->container->scoped(CurrentRequest::class, static fn (): CurrentRequest => new CurrentRequest());
         $this->container->instance(Events::class, $this->events);
         $this->container->instance(EventDispatcherInterface::class, $this->events);
         $this->container->instance(ExceptionHandler::class, $this->exceptions);
@@ -450,9 +453,23 @@ final class Application implements RequestHandlerInterface
             throw new InvalidArgumentException(sprintf('Arquivo de rotas inválido: "%s".', $relative));
         }
 
-        Web::within($this->router, static function () use ($path): void {
-            require $path;
-        });
+        try {
+            Web::within($this->router, static function () use ($path): void {
+                require $path;
+            });
+        } catch (InvalidRouteException $exception) {
+            // Say which line of the routes file made the mistake, not only which rule it broke.
+            $line = null;
+
+            foreach ($exception->getTrace() as $frame) {
+                if (isset($frame['file']) && realpath($frame['file']) === $path) {
+                    $line = $frame['line'] ?? null;
+                    break;
+                }
+            }
+
+            throw new InvalidRouteException($exception->getMessage() . ($line !== null ? sprintf(' (%s:%d)', $relative, $line) : sprintf(' (%s)', $relative)), 0, $exception);
+        }
     }
 
     /**

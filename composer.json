@@ -37,6 +37,17 @@
     "extra": {
         "branch-alias": {
             "dev-main": "0.1.x-dev"
+        },
+        "ethernize": {
+            "commands": [
+                "Ethernize\\Core\\Cli\\BuildCommand",
+                "Ethernize\\Core\\Cli\\Generator\\MakeControllerCommand",
+                "Ethernize\\Core\\Cli\\Generator\\MakeServiceCommand"
+            ],
+            "resource-parts": [
+                "Ethernize\\Core\\Cli\\Generator\\ControllerPart",
+                "Ethernize\\Core\\Cli\\Generator\\ServicePart"
+            ]
         }
     }
 }

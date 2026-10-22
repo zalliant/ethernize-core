@@ -97,16 +97,37 @@ final class ExceptionHandler
     }
 
     /**
-     * @return array{class: class-string, file: string, line: int, trace: list<string>}
+     * Debug mode only: where it happened, what to do about it, and the chain of causes.
+     *
+     * @return array{class: class-string, file: string, line: int, trace: list<string>, hint?: string, context?: array<string, string>, causes?: list<string>}
      */
     private function details(Throwable $exception): array
     {
-        return [
+        $details = [
             'class' => $exception::class,
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
             'trace' => explode("\n", $exception->getTraceAsString()),
         ];
+
+        $causes = [];
+
+        for ($cause = $exception; $cause !== null; $cause = $cause->getPrevious()) {
+            if ($cause instanceof Diagnosable) {
+                $details['hint'] ??= $cause->hint() ?? null;
+                $details['context'] = ($details['context'] ?? []) + $cause->context();
+            }
+
+            if ($cause !== $exception) {
+                $causes[] = sprintf('%s: %s (%s:%d)', $cause::class, $cause->getMessage(), $cause->getFile(), $cause->getLine());
+            }
+        }
+
+        if ($causes !== []) {
+            $details['causes'] = $causes;
+        }
+
+        return array_filter($details, static fn (mixed $value): bool => $value !== null);
     }
 
     /**
@@ -135,12 +156,25 @@ final class ExceptionHandler
 
         if ($details !== null) {
             $body .= sprintf(
-                '<h2>%s</h2><p>%s:%d</p><pre>%s</pre>',
+                '<h2>%s</h2><p>%s:%d</p>',
                 $escape($details['class']),
                 $escape($details['file']),
                 $details['line'],
-                $escape(implode("\n", $details['trace'])),
             );
+
+            if (isset($details['hint'])) {
+                $body .= '<p><strong>Hint:</strong> ' . $escape($details['hint']) . '</p>';
+            }
+
+            foreach ($details['context'] ?? [] as $name => $value) {
+                $body .= sprintf('<p><strong>%s:</strong> <code>%s</code></p>', $escape((string) $name), $escape($value));
+            }
+
+            foreach ($details['causes'] ?? [] as $cause) {
+                $body .= '<p>Caused by ' . $escape($cause) . '</p>';
+            }
+
+            $body .= '<pre>' . $escape(implode("\n", $details['trace'])) . '</pre>';
         }
 
         return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ethernize\Core\Cli;
 
+use Ethernize\Core\Http\Diagnosable;
 use Throwable;
 
 /**
@@ -22,7 +23,7 @@ final class Console
 
     public function register(Command $command): self
     {
-        if (preg_match('/^[a-z][a-z0-9-]*$/', $command->name()) !== 1) {
+        if (preg_match('/^[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?$/', $command->name()) !== 1) {
             throw new \InvalidArgumentException(sprintf('"%s" is not a valid command name.', $command->name()));
         }
 
@@ -70,12 +71,18 @@ final class Console
             return 2;
         }
 
+        $verbose = false;
+
         try {
             $rest = array_slice($words, 1);
 
             if (in_array('--help', $rest, true)) {
                 return $this->help($name, $output);
             }
+
+            // --verbose belongs to every command: it only changes how an unexpected failure is reported.
+            $verbose = in_array('--verbose', $rest, true);
+            $rest = array_values(array_diff($rest, ['--verbose']));
 
             return $command->run(Arguments::parse($rest), $output);
         } catch (UsageError $error) {
@@ -84,8 +91,21 @@ final class Console
 
             return 2;
         } catch (Throwable $error) {
-            // Details of unexpected failures belong in a log, not on the screen of someone who typed a command.
             $output->error(sprintf('The command "%s" failed: %s', $name, $error::class));
+
+            if (!$verbose) {
+                $output->error('Run it again with --verbose to see the message and where it came from.');
+
+                return 1;
+            }
+
+            for ($cause = $error; $cause !== null; $cause = $cause->getPrevious()) {
+                $output->error(sprintf('%s%s: %s (%s:%d)', $cause === $error ? '' : 'Caused by ', $cause::class, $cause->getMessage(), $cause->getFile(), $cause->getLine()));
+
+                if ($cause instanceof Diagnosable && $cause->hint() !== null) {
+                    $output->error('Hint: ' . $cause->hint());
+                }
+            }
 
             return 1;
         }

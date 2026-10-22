@@ -12,7 +12,7 @@ final class ServerRequestFactory
 {
     /**
      * Cria a requisição a partir das superglobais. Quando a aplicação roda em
-     * um subdiretório (como /ethernize/apps/aether/public no XAMPP), o prefixo
+     * um subdiretório (como /ethernize/apps/app/public no XAMPP), o prefixo
      * do script é removido do caminho para que as rotas sejam independentes
      * do local de instalação.
      */

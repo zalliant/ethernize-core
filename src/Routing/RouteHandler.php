@@ -7,6 +7,7 @@ namespace Ethernize\Core\Routing;
 use Closure;
 use Ethernize\Core\Container\Container;
 use Ethernize\Core\Container\ParameterTypeException;
+use Ethernize\Core\Http\CurrentRequest;
 use Ethernize\Core\Http\HttpException;
 use Ethernize\Core\Http\RequestAttributes;
 use Ethernize\Core\Http\Response;
@@ -33,6 +34,11 @@ final class RouteHandler implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
+        // Whatever renders during this call (components, for instance) must see this request, not an earlier copy.
+        if ($this->container->isBound(CurrentRequest::class)) {
+            $this->container->get(CurrentRequest::class)->set($request);
+        }
+
         /** @var array<string, string> $parameters */
         $parameters = $request->getAttribute(RequestAttributes::ROUTE_PARAMS, []);
         $byType = [ServerRequestInterface::class => $request];
